@@ -69,6 +69,7 @@ A mobile-first React Native app built with Expo to fill out, preview, and genera
 4. **Run on your device:**
    - **Android**: Press `a` to open on Android emulator or scan QR code with Expo Go app
    - **iOS**: Press `i` to open on iOS simulator or scan QR code with Camera app
+   - **Expo Go(How I use it)**: Install Expo Go app from playstore and Scan the Qr code in while in Expo go mode
 
 ## Form Sections
 
