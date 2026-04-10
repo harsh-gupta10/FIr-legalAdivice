@@ -1,0 +1,29 @@
+{
+  "name": "fir-form-app",
+  "version": "1.0.0",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.21.0",
+    "@react-native-community/datetimepicker": "^9.1.0",
+    "expo": "^54.0.0",
+    "expo-constants": "^17.0.0",
+    "expo-file-system": "^19.0.0",
+    "expo-print": "^15.0.0",
+    "expo-sharing": "^14.0.0",
+    "react": "^19.1.0",
+    "react-native": "0.81.0",
+    "react-native-pdf": "^7.0.4",
+    "react-native-webview": "^13.16.1"
+  },
+  "devDependencies": {
+    "@babel/core": "latest",
+    "babel-preset-expo": "latest"
+  },
+  "private": true
+}
