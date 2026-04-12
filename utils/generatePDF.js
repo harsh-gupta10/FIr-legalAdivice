@@ -1,40 +1,54 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { Platform } from 'react-native';
+import * as Print from 'expo-print'
+import * as Sharing from 'expo-sharing'
+import { Platform } from 'react-native'
+import { getCurrentLanguage, getLocaleTag, i18n, tForLocale } from '../i18n'
 
-const generateHtml = (data) => {
+const generateHtml = (data, language = 'en') => {
+  const localeTag = getLocaleTag(language)
+  const tr = (key, options = {}) => tForLocale(language, key, options)
+
   const formatDate = (date) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-IN');
-  };
+    if (!date) return tr('common.noData')
+    return new Date(date).toLocaleDateString(localeTag)
+  }
 
   const formatTime = (time) => {
-    if (!time) return 'N/A';
-    return new Date(time).toLocaleTimeString('en-IN', {
+    if (!time) return tr('common.noData')
+    return new Date(time).toLocaleTimeString(localeTag, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-    });
-  };
+    })
+  }
 
-  const witnessesHtml = data.witnesses && data.witnesses.length > 0
-    ? data.witnesses.map((w, idx) => `
+  const witnessesHtml =
+    data.witnesses && data.witnesses.length > 0
+      ? data.witnesses
+          .map(
+            (w, idx) => `
         <tr>
           <td style="border: 1px solid #333; padding: 8px;">${idx + 1}</td>
-          <td style="border: 1px solid #333; padding: 8px;">${w.name || 'N/A'}</td>
-          <td style="border: 1px solid #333; padding: 8px;">${w.contact || 'N/A'}</td>
+          <td style="border: 1px solid #333; padding: 8px;">${w.name || tr('common.noData')}</td>
+          <td style="border: 1px solid #333; padding: 8px;">${w.contact || tr('common.noData')}</td>
         </tr>
-      `).join('')
-    : '<tr><td colspan="3" style="border: 1px solid #333; padding: 8px; text-align: center;">No witnesses recorded</td></tr>';
+      `,
+          )
+          .join('')
+      : `<tr><td colspan="3" style="border: 1px solid #333; padding: 8px; text-align: center;">${tr('pdf.noWitnesses')}</td></tr>`
 
-  const evidenceHtml = data.evidence && data.evidence.length > 0
-    ? data.evidence.map((e, idx) => `
+  const evidenceHtml =
+    data.evidence && data.evidence.length > 0
+      ? data.evidence
+          .map(
+            (e, idx) => `
         <tr>
           <td style="border: 1px solid #333; padding: 8px;">${idx + 1}</td>
-          <td style="border: 1px solid #333; padding: 8px;">${e.description || 'N/A'}</td>
+          <td style="border: 1px solid #333; padding: 8px;">${e.description || tr('common.noData')}</td>
         </tr>
-      `).join('')
-    : '<tr><td colspan="2" style="border: 1px solid #333; padding: 8px; text-align: center;">No evidence recorded</td></tr>';
+      `,
+          )
+          .join('')
+      : `<tr><td colspan="2" style="border: 1px solid #333; padding: 8px; text-align: center;">${tr('pdf.noEvidence')}</td></tr>`
 
   const html = `
     <!DOCTYPE html>
@@ -144,128 +158,143 @@ const generateHtml = (data) => {
     </head>
     <body>
       <div class="header">
-        <h1>First Information Report (FIR)</h1>
-        <p>Official Record of Complaint</p>
-        <p class="date-generated">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+        <h1>${tr('pdf.title')}</h1>
+        <p>${tr('fields.officialRecord')}</p>
+        <p class="date-generated">${tr('fields.generatedOn')}: ${new Date().toLocaleString(localeTag)}</p>
       </div>
 
       <!-- SECTION 1: COMPLAINANT DETAILS -->
       <div class="section">
-        <div class="section-title">1. COMPLAINANT DETAILS</div>
+        <div class="section-title">${tr('pdf.section1')}</div>
         <div class="field-row">
           <div class="field">
-            <div class="field-label">Full Name</div>
-            <div class="field-value">${data.fullName || 'N/A'}</div>
+            <div class="field-label">${tr('fields.fullName')}</div>
+            <div class="field-value">${data.fullName || tr('common.noData')}</div>
           </div>
           <div class="field">
-            <div class="field-label">Gender</div>
-            <div class="field-value">${data.gender || 'N/A'}</div>
+            <div class="field-label">${tr('fields.gender')}</div>
+            <div class="field-value">${data.gender || tr('common.noData')}</div>
           </div>
           <div class="field">
-            <div class="field-label">Age</div>
-            <div class="field-value">${data.age || 'N/A'}</div>
+            <div class="field-label">${tr('fields.age')}</div>
+            <div class="field-value">${data.age || tr('common.noData')}</div>
           </div>
         </div>
         <div class="field-row">
           <div class="field">
-            <div class="field-label">Phone Number</div>
-            <div class="field-value">${data.phone || 'N/A'}</div>
+            <div class="field-label">${tr('fields.phoneRequired')}</div>
+            <div class="field-value">${data.phone || tr('common.noData')}</div>
           </div>
           <div class="field">
-            <div class="field-label">Email</div>
-            <div class="field-value">${data.email || 'N/A'}</div>
+            <div class="field-label">${tr('common.email')}</div>
+            <div class="field-value">${data.email || tr('common.noData')}</div>
           </div>
         </div>
         <div class="field-row">
           <div class="field" style="flex: 1 1 100%;">
-            <div class="field-label">Address</div>
-            <div class="field-value">${data.address || 'N/A'}</div>
+            <div class="field-label">${tr('common.address')}</div>
+            <div class="field-value">${data.address || tr('common.noData')}</div>
           </div>
         </div>
       </div>
 
       <!-- SECTION 2: INCIDENT DETAILS -->
       <div class="section">
-        <div class="section-title">2. INCIDENT DETAILS</div>
+        <div class="section-title">${tr('pdf.section2')}</div>
         <div class="field-row">
           <div class="field">
-            <div class="field-label">Date of Incident</div>
+            <div class="field-label">${tr('fields.dateOfIncident')}</div>
             <div class="field-value">${formatDate(data.dateOfIncident)}</div>
           </div>
           <div class="field">
-            <div class="field-label">Time of Incident</div>
+            <div class="field-label">${tr('fields.timeOfIncident')}</div>
             <div class="field-value">${formatTime(data.timeOfIncident)}</div>
           </div>
         </div>
         <div class="field-row">
           <div class="field" style="flex: 1 1 100%;">
-            <div class="field-label">Place of Occurrence</div>
-            <div class="field-value">${data.placeOfOccurrence || 'N/A'}</div>
+            <div class="field-label">${tr('fields.placeOfOccurrenceRequired')}</div>
+            <div class="field-value">${data.placeOfOccurrence || tr('common.noData')}</div>
           </div>
         </div>
         <div class="field-row">
           <div class="field">
-            <div class="field-label">Police Station</div>
-            <div class="field-value">${data.policeStation || 'N/A'}</div>
+            <div class="field-label">${tr('fields.policeStation')}</div>
+            <div class="field-value">${data.policeStation || tr('common.noData')}</div>
           </div>
           <div class="field">
-            <div class="field-label">District/City</div>
-            <div class="field-value">${data.districtCity || 'N/A'}</div>
+            <div class="field-label">${tr('fields.districtCityRequired')}</div>
+            <div class="field-value">${data.districtCity || tr('common.noData')}</div>
           </div>
         </div>
       </div>
 
       <!-- SECTION 3: COMPLAINT INFORMATION -->
       <div class="section">
-        <div class="section-title">3. COMPLAINT INFORMATION</div>
+        <div class="section-title">${tr('pdf.section3')}</div>
         <div class="field-row">
           <div class="field">
-            <div class="field-label">Type of Offence</div>
-            <div class="field-value">${data.offenceType || 'N/A'}</div>
+            <div class="field-label">${tr('fields.typeOfOffence')}</div>
+            <div class="field-value">${i18n.t(
+              data.offenceType === 'Theft'
+                ? 'offence.theft'
+                : data.offenceType === 'Assault'
+                  ? 'offence.assault'
+                  : data.offenceType === 'Fraud'
+                    ? 'offence.fraud'
+                    : data.offenceType === 'Harassment'
+                      ? 'offence.harassment'
+                      : 'offence.other',
+              { locale: language },
+            )}</div>
           </div>
         </div>
         <div class="field-row">
           <div class="field" style="flex: 1 1 100%;">
-            <div class="field-label">Detailed Description</div>
-            <div class="field-value" style="min-height: 60px; white-space: pre-wrap;">${data.description || 'N/A'}</div>
+            <div class="field-label">${tr('fields.detailedDescriptionRequired')}</div>
+            <div class="field-value" style="min-height: 60px; white-space: pre-wrap;">${data.description || tr('common.noData')}</div>
           </div>
         </div>
       </div>
 
       <!-- SECTION 4: ACCUSED DETAILS -->
-      ${data.accusedName ? `
+      ${
+        data.accusedName
+          ? `
         <div class="section">
-          <div class="section-title">4. ACCUSED DETAILS</div>
+          <div class="section-title">${tr('pdf.section4')}</div>
           <div class="field-row">
             <div class="field" style="flex: 1 1 100%;">
-              <div class="field-label">Name</div>
-              <div class="field-value">${data.accusedName || 'N/A'}</div>
+              <div class="field-label">${tr('common.name')}</div>
+              <div class="field-value">${data.accusedName || tr('common.noData')}</div>
             </div>
           </div>
           <div class="field-row">
             <div class="field" style="flex: 1 1 100%;">
-              <div class="field-label">Address</div>
-              <div class="field-value">${data.accusedAddress || 'N/A'}</div>
+              <div class="field-label">${tr('common.address')}</div>
+              <div class="field-value">${data.accusedAddress || tr('common.noData')}</div>
             </div>
           </div>
           <div class="field-row">
             <div class="field" style="flex: 1 1 100%;">
-              <div class="field-label">Description</div>
-              <div class="field-value" style="min-height: 40px; white-space: pre-wrap;">${data.accusedDescription || 'N/A'}</div>
+              <div class="field-label">${tr('common.description')}</div>
+              <div class="field-value" style="min-height: 40px; white-space: pre-wrap;">${data.accusedDescription || tr('common.noData')}</div>
             </div>
           </div>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <!-- SECTION 5: WITNESS DETAILS -->
       <div class="section">
-        <div class="section-title">5. WITNESS DETAILS</div>
+        <div class="section-title">${tr('pdf.section5')}</div>
         <table>
           <thead>
             <tr>
-              <th style="width: 50px;">S.No</th>
-              <th>Name</th>
-              <th>Contact Information</th>
+              <th style="width: 50px;">${tr('fields.sNo')}</th>
+              <th>${tr('common.name')}</th>
+              <th>${tr('fields.contactInformation')}</th>
             </tr>
           </thead>
           <tbody>
@@ -276,12 +305,12 @@ const generateHtml = (data) => {
 
       <!-- SECTION 6: EVIDENCE DETAILS -->
       <div class="section">
-        <div class="section-title">6. EVIDENCE DETAILS</div>
+        <div class="section-title">${tr('pdf.section6')}</div>
         <table>
           <thead>
             <tr>
-              <th style="width: 50px;">S.No</th>
-              <th>Description of Evidence</th>
+              <th style="width: 50px;">${tr('fields.sNo')}</th>
+              <th>${tr('fields.evidenceDescription')}</th>
             </tr>
           </thead>
           <tbody>
@@ -292,67 +321,73 @@ const generateHtml = (data) => {
 
       <!-- SECTION 7: DECLARATION -->
       <div class="section declaration-section">
-        <div class="section-title">7. DECLARATION</div>
-        <p>I hereby declare that the information provided in this FIR is true to the best of my knowledge and belief.</p>
+        <div class="section-title">${tr('pdf.section7')}</div>
+        <p>${tr('pdf.declarationText')}</p>
         <div class="signature-section">
           <div class="signature-box">
-            <p>Complainant Signature</p>
+            <p>${tr('fields.signaturePlaceholder')}</p>
           </div>
           <div class="signature-box">
-            <p>Date: _______________</p>
+            <p>${tr('fields.datePlaceholder')}</p>
           </div>
         </div>
       </div>
     </body>
     </html>
-  `;
+  `
 
-  return html;
-};
+  return html
+}
 
-export const generateAndSharePDF = async (formData) => {
+export const generateAndSharePDF = async (
+  formData,
+  language = getCurrentLanguage(),
+) => {
   try {
-    const html = generateHtml(formData);
+    const html = generateHtml(formData, language)
     const { uri } = await Print.printToFileAsync({
       html,
       base64: false,
-    });
+    })
 
     if (Platform.OS === 'web') {
       // For web, you'd need a different approach
-      console.log('PDF generated at:', uri);
-      return uri;
+      console.log('PDF generated at:', uri)
+      return uri
     }
 
     // Share the PDF
-    const canShare = await Sharing.isAvailableAsync();
+    const canShare = await Sharing.isAvailableAsync()
     if (canShare) {
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',
-        dialogTitle: 'Share FIR PDF',
+        dialogTitle: tForLocale(language, 'pdf.shareDialogTitle'),
         UTI: 'com.adobe.pdf',
-      });
+      })
     } else {
-      console.log('Sharing not available on this platform');
+      console.log('Sharing not available on this platform')
     }
 
-    return uri;
+    return uri
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    throw error;
+    console.error('Error generating PDF:', error)
+    throw error
   }
-};
+}
 
-export const generatePDF = async (formData) => {
+export const generatePDF = async (
+  formData,
+  language = getCurrentLanguage(),
+) => {
   try {
-    const html = generateHtml(formData);
+    const html = generateHtml(formData, language)
     const { uri } = await Print.printToFileAsync({
       html,
       base64: false,
-    });
-    return uri;
+    })
+    return uri
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    throw error;
+    console.error('Error generating PDF:', error)
+    throw error
   }
-};
+}

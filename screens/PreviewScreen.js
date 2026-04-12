@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   View,
   StyleSheet,
@@ -7,87 +7,84 @@ import {
   Text,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { generateAndSharePDF, generatePDF } from '../utils/generatePDF';
-import { deleteDraft } from '../utils/storage';
-import * as Sharing from 'expo-sharing';
+} from 'react-native'
+import { generateAndSharePDF, generatePDF } from '../utils/generatePDF'
+import { deleteDraft } from '../utils/storage'
+import * as Sharing from 'expo-sharing'
+import { getCurrentLanguage, getLocaleTag, getOffenceLabel, t } from '../i18n'
 
 const PreviewScreen = ({ formData, onEdit, onBack }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
 
   const handleGenerateAndShare = async () => {
     try {
-      setLoading(true);
-      await generateAndSharePDF(formData);
-      Alert.alert(
-        'Success',
-        'PDF generated successfully! Please select how to share it.'
-      );
+      setLoading(true)
+      await generateAndSharePDF(formData)
+      Alert.alert(t('alerts.success'), t('alerts.pdfGeneratedSharePrompt'))
     } catch (error) {
-      Alert.alert('Error', 'Failed to generate PDF: ' + error.message);
+      Alert.alert(
+        t('alerts.error'),
+        t('alerts.failedGeneratePdf', { message: error.message }),
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleDownload = async () => {
     try {
-      setLoading(true);
-      const uri = await generatePDF(formData);
-      Alert.alert(
-        'Success',
-        'PDF generated successfully!\n\nFile saved to:\n' + uri
-      );
+      setLoading(true)
+      const uri = await generatePDF(formData, getCurrentLanguage())
+      Alert.alert(t('alerts.success'), t('alerts.pdfGeneratedAt', { uri }))
     } catch (error) {
-      Alert.alert('Error', 'Failed to generate PDF: ' + error.message);
+      Alert.alert(
+        t('alerts.error'),
+        t('alerts.failedGeneratePdf', { message: error.message }),
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleComplete = async () => {
     try {
-      Alert.alert(
-        'Confirm',
-        'Are you sure you want to submit this FIR? This will clear the saved draft.',
-        [
-          { text: 'Cancel', onPress: () => {} },
-          {
-            text: 'Submit & Clear',
-            onPress: async () => {
-              await deleteDraft();
-              Alert.alert(
-                'Complete',
-                'FIR submitted successfully! Draft cleared.'
-              );
-              onBack();
-            },
+      Alert.alert(t('alerts.confirm'), t('alerts.submitFirConfirm'), [
+        { text: t('common.cancel'), onPress: () => {} },
+        {
+          text: t('common.submitAndClear'),
+          onPress: async () => {
+            await deleteDraft()
+            Alert.alert(t('alerts.complete'), t('alerts.firSubmitted'))
+            onBack()
           },
-        ]
-      );
+        },
+      ])
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error:', error)
     }
-  };
+  }
 
   const formatDate = (date) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-IN');
-  };
+    if (!date) return t('common.noData')
+    return new Date(date).toLocaleDateString(getLocaleTag(getCurrentLanguage()))
+  }
 
   const formatTime = (time) => {
-    if (!time) return 'N/A';
-    return new Date(time).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
+    if (!time) return t('common.noData')
+    return new Date(time).toLocaleTimeString(
+      getLocaleTag(getCurrentLanguage()),
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      },
+    )
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Review FIR</Text>
+        <Text style={styles.headerTitle}>{t('actions.reviewFir')}</Text>
         <TouchableOpacity onPress={onBack} style={styles.closeButton}>
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
@@ -96,34 +93,38 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Complainant Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Complainant Details</Text>
+          <Text style={styles.sectionTitle}>
+            {t('sections.complainantDetails')}
+          </Text>
           <View style={styles.fieldRow}>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>{t('fields.fullName')}</Text>
               <Text style={styles.value}>{formData.fullName}</Text>
             </View>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Gender</Text>
+              <Text style={styles.label}>{t('fields.gender')}</Text>
               <Text style={styles.value}>{formData.gender}</Text>
             </View>
           </View>
           <View style={styles.fieldRow}>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Age</Text>
-              <Text style={styles.value}>{formData.age || 'N/A'}</Text>
+              <Text style={styles.label}>{t('fields.age')}</Text>
+              <Text style={styles.value}>
+                {formData.age || t('common.noData')}
+              </Text>
             </View>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Phone</Text>
+              <Text style={styles.label}>{t('common.phone')}</Text>
               <Text style={styles.value}>{formData.phone}</Text>
             </View>
           </View>
           <View style={styles.fieldFull}>
-            <Text style={styles.label}>Address</Text>
+            <Text style={styles.label}>{t('common.address')}</Text>
             <Text style={styles.value}>{formData.address}</Text>
           </View>
           {formData.email && (
             <View style={styles.fieldFull}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('common.email')}</Text>
               <Text style={styles.value}>{formData.email}</Text>
             </View>
           )}
@@ -131,28 +132,36 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
 
         {/* Incident Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Incident Details</Text>
+          <Text style={styles.sectionTitle}>
+            {t('sections.incidentDetails')}
+          </Text>
           <View style={styles.fieldRow}>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Date</Text>
-              <Text style={styles.value}>{formatDate(formData.dateOfIncident)}</Text>
+              <Text style={styles.label}>{t('common.date')}</Text>
+              <Text style={styles.value}>
+                {formatDate(formData.dateOfIncident)}
+              </Text>
             </View>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Time</Text>
-              <Text style={styles.value}>{formatTime(formData.timeOfIncident)}</Text>
+              <Text style={styles.label}>{t('common.time')}</Text>
+              <Text style={styles.value}>
+                {formatTime(formData.timeOfIncident)}
+              </Text>
             </View>
           </View>
           <View style={styles.fieldFull}>
-            <Text style={styles.label}>Place</Text>
+            <Text style={styles.label}>{t('fields.place')}</Text>
             <Text style={styles.value}>{formData.placeOfOccurrence}</Text>
           </View>
           <View style={styles.fieldRow}>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>Police Station</Text>
+              <Text style={styles.label}>{t('fields.policeStation')}</Text>
               <Text style={styles.value}>{formData.policeStation}</Text>
             </View>
             <View style={styles.fieldItem}>
-              <Text style={styles.label}>District/City</Text>
+              <Text style={styles.label}>
+                {t('fields.districtCityRequired')}
+              </Text>
               <Text style={styles.value}>{formData.districtCity}</Text>
             </View>
           </View>
@@ -160,13 +169,17 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
 
         {/* Complaint Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Complaint Information</Text>
+          <Text style={styles.sectionTitle}>
+            {t('sections.complaintInformation')}
+          </Text>
           <View style={styles.fieldFull}>
-            <Text style={styles.label}>Type of Offence</Text>
-            <Text style={styles.value}>{formData.offenceType}</Text>
+            <Text style={styles.label}>{t('fields.typeOfOffence')}</Text>
+            <Text style={styles.value}>
+              {getOffenceLabel(formData.offenceType)}
+            </Text>
           </View>
           <View style={styles.fieldFull}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={styles.label}>{t('common.description')}</Text>
             <Text style={[styles.value, styles.multilineValue]}>
               {formData.description}
             </Text>
@@ -176,20 +189,22 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
         {/* Accused Details */}
         {formData.accusedName && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Accused Details</Text>
+            <Text style={styles.sectionTitle}>
+              {t('sections.accusedDetails')}
+            </Text>
             <View style={styles.fieldFull}>
-              <Text style={styles.label}>Name</Text>
+              <Text style={styles.label}>{t('common.name')}</Text>
               <Text style={styles.value}>{formData.accusedName}</Text>
             </View>
             {formData.accusedAddress && (
               <View style={styles.fieldFull}>
-                <Text style={styles.label}>Address</Text>
+                <Text style={styles.label}>{t('common.address')}</Text>
                 <Text style={styles.value}>{formData.accusedAddress}</Text>
               </View>
             )}
             {formData.accusedDescription && (
               <View style={styles.fieldFull}>
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label}>{t('common.description')}</Text>
                 <Text style={[styles.value, styles.multilineValue]}>
                   {formData.accusedDescription}
                 </Text>
@@ -202,17 +217,21 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
         {formData.witnesses.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Witnesses ({formData.witnesses.length})
+              {t('sections.witnessesCount', {
+                count: formData.witnesses.length,
+              })}
             </Text>
             {formData.witnesses.map((witness, idx) => (
               <View key={idx} style={styles.itemCard}>
-                <Text style={styles.itemTitle}>Witness {idx + 1}</Text>
+                <Text style={styles.itemTitle}>
+                  {t('fields.witness')} {idx + 1}
+                </Text>
                 <View style={styles.fieldFull}>
-                  <Text style={styles.label}>Name</Text>
+                  <Text style={styles.label}>{t('common.name')}</Text>
                   <Text style={styles.value}>{witness.name}</Text>
                 </View>
                 <View style={styles.fieldFull}>
-                  <Text style={styles.label}>Contact</Text>
+                  <Text style={styles.label}>{t('common.contact')}</Text>
                   <Text style={styles.value}>{witness.contact}</Text>
                 </View>
               </View>
@@ -224,13 +243,15 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
         {formData.evidence.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Evidence ({formData.evidence.length})
+              {t('sections.evidenceCount', { count: formData.evidence.length })}
             </Text>
             {formData.evidence.map((evidence, idx) => (
               <View key={idx} style={styles.itemCard}>
-                <Text style={styles.itemTitle}>Evidence {idx + 1}</Text>
+                <Text style={styles.itemTitle}>
+                  {t('fields.evidence')} {idx + 1}
+                </Text>
                 <View style={styles.fieldFull}>
-                  <Text style={styles.label}>Description</Text>
+                  <Text style={styles.label}>{t('common.description')}</Text>
                   <Text style={[styles.value, styles.multilineValue]}>
                     {evidence.description}
                   </Text>
@@ -247,7 +268,7 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
           onPress={onEdit}
           disabled={loading}
         >
-          <Text style={styles.buttonSecondaryText}>Edit</Text>
+          <Text style={styles.buttonSecondaryText}>{t('common.edit')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -257,13 +278,13 @@ const PreviewScreen = ({ formData, onEdit, onBack }) => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Share PDF</Text>
+            <Text style={styles.buttonText}>{t('actions.sharePdf')}</Text>
           )}
         </TouchableOpacity>
       </View>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -392,6 +413,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-});
+})
 
-export default PreviewScreen;
+export default PreviewScreen

@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import React, { useState } from 'react'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  ScrollView,
+} from 'react-native'
+import { t } from '../i18n'
 
 const DropdownPicker = ({ label, value, onValueChange, items, error }) => {
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false)
 
-  const selectedLabel = items.find(item => item.value === value)?.label || 'Select an option';
+  const selectedLabel =
+    items.find((item) => item.value === value)?.label ||
+    t('placeholders.selectOption')
 
   return (
     <View style={styles.container}>
@@ -44,8 +54,8 @@ const DropdownPicker = ({ label, value, onValueChange, items, error }) => {
                     value === item.value && styles.dropdownItemSelected,
                   ]}
                   onPress={() => {
-                    onValueChange(item.value);
-                    setShowDropdown(false);
+                    onValueChange(item.value)
+                    setShowDropdown(false)
                   }}
                 >
                   <Text
@@ -63,8 +73,8 @@ const DropdownPicker = ({ label, value, onValueChange, items, error }) => {
         </TouchableOpacity>
       </Modal>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -154,6 +164,6 @@ const styles = StyleSheet.create({
     color: '#2196f3',
     fontWeight: '600',
   },
-});
+})
 
-export default DropdownPicker;
+export default DropdownPicker

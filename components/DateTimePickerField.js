@@ -1,29 +1,56 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from 'react'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native'
+import DateTimePicker from '@react-native-community/datetimepicker'
+import { getCurrentLanguage, getLocaleTag, t } from '../i18n'
 
-const DateTimePickerField = ({ label, value, onChangeDate, onChangeTime, mode = 'date', error }) => {
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState(mode);
+const DateTimePickerField = ({
+  label,
+  value,
+  onChangeDate,
+  onChangeTime,
+  mode = 'date',
+  error,
+}) => {
+  const [showPicker, setShowPicker] = useState(false)
+  const [pickerMode, setPickerMode] = useState(mode)
 
   const handleChange = (event, selectedValue) => {
     if (Platform.OS === 'android') {
-      setShowPicker(false);
+      setShowPicker(false)
     }
 
     if (selectedValue) {
       if (mode === 'date') {
-        onChangeDate(selectedValue);
+        onChangeDate(selectedValue)
       } else {
-        onChangeTime(selectedValue);
+        onChangeTime(selectedValue)
       }
     }
-  };
+  }
 
   const formatDisplay = () => {
-    if (!value) return 'Select ' + (mode === 'date' ? 'Date' : 'Time');
-    return value.toLocaleDateString('en-IN') + (mode === 'time' ? ' ' + value.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '');
-  };
+    const localeTag = getLocaleTag(getCurrentLanguage())
+    if (!value)
+      return mode === 'date'
+        ? t('placeholders.selectDate')
+        : t('placeholders.selectTime')
+    return (
+      value.toLocaleDateString(localeTag) +
+      (mode === 'time'
+        ? ' ' +
+          value.toLocaleTimeString(localeTag, {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '')
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -31,8 +58,8 @@ const DateTimePickerField = ({ label, value, onChangeDate, onChangeTime, mode = 
       <TouchableOpacity
         style={[styles.button, error && styles.buttonError]}
         onPress={() => {
-          setShowPicker(true);
-          setPickerMode(mode);
+          setShowPicker(true)
+          setPickerMode(mode)
         }}
       >
         <Text style={styles.buttonText}>{formatDisplay()}</Text>
@@ -52,13 +79,13 @@ const DateTimePickerField = ({ label, value, onChangeDate, onChangeTime, mode = 
       {Platform.OS === 'ios' && showPicker && (
         <View style={styles.iosButtonContainer}>
           <TouchableOpacity onPress={() => setShowPicker(false)}>
-            <Text style={styles.iosButton}>Done</Text>
+            <Text style={styles.iosButton}>{t('common.done')}</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -103,6 +130,6 @@ const styles = StyleSheet.create({
     color: '#2196f3',
     fontWeight: '600',
   },
-});
+})
 
-export default DateTimePickerField;
+export default DateTimePickerField

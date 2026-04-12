@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useState } from 'react';
+import React, { useReducer, useEffect, useState } from 'react'
 import {
   View,
   StyleSheet,
@@ -6,259 +6,269 @@ import {
   TouchableOpacity,
   Text,
   Alert,
-} from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import StepIndicator from '../components/StepIndicator';
-import FormInput from '../components/FormInput';
-import DropdownPicker from '../components/DropdownPicker';
-import DateTimePickerField from '../components/DateTimePickerField';
-import { saveDraft, loadDraft } from '../utils/storage';
-import { validateField, getInitialFormState } from '../utils/validation';
+} from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
+import StepIndicator from '../components/StepIndicator'
+import FormInput from '../components/FormInput'
+import DropdownPicker from '../components/DropdownPicker'
+import DateTimePickerField from '../components/DateTimePickerField'
+import { saveDraft, loadDraft } from '../utils/storage'
+import { validateField, getInitialFormState } from '../utils/validation'
+import { getOffenceLabel, t } from '../i18n'
 
-const STEPS = [
-  'Complainant',
-  'Incident',
-  'Complaint',
-  'Accused',
-  'Witnesses',
-  'Evidence',
-  'Declaration',
-];
-
-const OFFENCE_TYPES = [
-  { label: 'Theft', value: 'Theft' },
-  { label: 'Assault', value: 'Assault' },
-  { label: 'Fraud', value: 'Fraud' },
-  { label: 'Harassment', value: 'Harassment' },
-  { label: 'Other', value: 'Other' },
-];
-
-const GENDER_OPTIONS = [
-  { label: 'Male', value: 'Male' },
-  { label: 'Female', value: 'Female' },
-  { label: 'Other', value: 'Other' },
-  { label: 'Not Specified', value: 'Not Specified' },
-];
+const OFFENCE_VALUES = ['Theft', 'Assault', 'Fraud', 'Harassment', 'Other']
+const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Not Specified']
 
 const formReducer = (state, action) => {
   switch (action.type) {
     case 'SET_FIELD':
-      return { ...state, [action.payload.field]: action.payload.value };
+      return { ...state, [action.payload.field]: action.payload.value }
     case 'ADD_WITNESS':
       return {
         ...state,
         witnesses: [...state.witnesses, { name: '', contact: '' }],
-      };
+      }
     case 'REMOVE_WITNESS':
       return {
         ...state,
         witnesses: state.witnesses.filter((_, idx) => idx !== action.payload),
-      };
+      }
     case 'UPDATE_WITNESS':
-      const updatedWitnesses = [...state.witnesses];
+      const updatedWitnesses = [...state.witnesses]
       updatedWitnesses[action.payload.index] = {
         ...updatedWitnesses[action.payload.index],
         [action.payload.field]: action.payload.value,
-      };
-      return { ...state, witnesses: updatedWitnesses };
+      }
+      return { ...state, witnesses: updatedWitnesses }
     case 'ADD_EVIDENCE':
       return {
         ...state,
         evidence: [...state.evidence, { description: '' }],
-      };
+      }
     case 'REMOVE_EVIDENCE':
       return {
         ...state,
         evidence: state.evidence.filter((_, idx) => idx !== action.payload),
-      };
+      }
     case 'UPDATE_EVIDENCE':
-      const updatedEvidence = [...state.evidence];
+      const updatedEvidence = [...state.evidence]
       updatedEvidence[action.payload.index] = {
         ...updatedEvidence[action.payload.index],
         description: action.payload.value,
-      };
-      return { ...state, evidence: updatedEvidence };
+      }
+      return { ...state, evidence: updatedEvidence }
     case 'RESET':
-      return getInitialFormState();
+      return getInitialFormState()
     case 'LOAD_DRAFT':
-      return action.payload;
+      return action.payload
     default:
-      return state;
+      return state
   }
-};
+}
 
 const FormScreen = ({ onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, dispatch] = useReducer(formReducer, getInitialFormState());
-  const [errors, setErrors] = useState({});
+  const steps = [
+    t('sections.complainantDetails'),
+    t('sections.incidentDetails'),
+    t('sections.complaintInformation'),
+    t('sections.accusedDetails'),
+    t('sections.witnessDetails'),
+    t('sections.evidenceDetails'),
+    t('sections.declaration'),
+  ]
+
+  const offenceOptions = OFFENCE_VALUES.map((value) => ({
+    label: getOffenceLabel(value),
+    value,
+  }))
+
+  const genderOptions = GENDER_OPTIONS.map((value) => ({
+    label:
+      value === 'Male'
+        ? t('genderOptions.male')
+        : value === 'Female'
+          ? t('genderOptions.female')
+          : value === 'Other'
+            ? t('genderOptions.other')
+            : t('genderOptions.notSpecified'),
+    value,
+  }))
+
+  const [currentStep, setCurrentStep] = useState(0)
+  const [formData, dispatch] = useReducer(formReducer, getInitialFormState())
+  const [errors, setErrors] = useState({})
 
   useEffect(() => {
-    loadDraftOnMount();
-  }, []);
+    loadDraftOnMount()
+  }, [])
 
   const loadDraftOnMount = async () => {
     try {
-      const draft = await loadDraft();
+      const draft = await loadDraft()
       if (draft) {
-        dispatch({ type: 'LOAD_DRAFT', payload: draft });
+        dispatch({ type: 'LOAD_DRAFT', payload: draft })
       }
     } catch (error) {
-      console.error('Error loading draft:', error);
+      console.error('Error loading draft:', error)
     }
-  };
+  }
 
   const handleFieldChange = (field, value) => {
-    dispatch({ type: 'SET_FIELD', payload: { field, value } });
+    dispatch({ type: 'SET_FIELD', payload: { field, value } })
     if (errors[field]) {
-      setErrors({ ...errors, [field]: null });
+      setErrors({ ...errors, [field]: null })
     }
-  };
+  }
 
   const validateStep = () => {
-    const newErrors = {};
+    const newErrors = {}
 
     if (currentStep === 0) {
       // Complainant Details
       if (!validateField('fullName', formData.fullName)) {
-        newErrors.fullName = 'Full name is required (min 2 characters)';
+        newErrors.fullName = t('validation.fullNameRequired')
       }
       if (!validateField('address', formData.address)) {
-        newErrors.address = 'Address is required (min 5 characters)';
+        newErrors.address = t('validation.addressRequired')
       }
       if (!validateField('phone', formData.phone)) {
-        newErrors.phone = 'Valid phone number is required';
+        newErrors.phone = t('validation.phoneRequired')
       }
       if (formData.email && !validateField('email', formData.email)) {
-        newErrors.email = 'Invalid email format';
+        newErrors.email = t('validation.emailInvalid')
       }
     } else if (currentStep === 1) {
       // Incident Details
       if (!validateField('dateOfIncident', formData.dateOfIncident)) {
-        newErrors.dateOfIncident = 'Date of incident is required';
+        newErrors.dateOfIncident = t('validation.dateRequired')
       }
       if (!validateField('timeOfIncident', formData.timeOfIncident)) {
-        newErrors.timeOfIncident = 'Time of incident is required';
+        newErrors.timeOfIncident = t('validation.timeRequired')
       }
       if (!validateField('placeOfOccurrence', formData.placeOfOccurrence)) {
-        newErrors.placeOfOccurrence = 'Place of occurrence is required';
+        newErrors.placeOfOccurrence = t('validation.placeRequired')
       }
       if (!validateField('policeStation', formData.policeStation)) {
-        newErrors.policeStation = 'Police station is required';
+        newErrors.policeStation = t('validation.policeStationRequired')
       }
       if (!validateField('districtCity', formData.districtCity)) {
-        newErrors.districtCity = 'District/City is required';
+        newErrors.districtCity = t('validation.districtRequired')
       }
     } else if (currentStep === 2) {
       // Complaint Information
       if (!validateField('description', formData.description)) {
-        newErrors.description = 'Description is required (min 20 characters)';
+        newErrors.description = t('validation.descriptionRequired')
       }
     } else if (currentStep === 6) {
       // Declaration
       if (!validateField('declaration', formData.declaration)) {
-        newErrors.declaration = 'You must accept the declaration';
+        newErrors.declaration = t('validation.declarationRequired')
       }
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleNext = () => {
     if (validateStep()) {
-      saveDraft(formData);
-      if (currentStep < STEPS.length - 1) {
-        setCurrentStep(currentStep + 1);
+      saveDraft(formData)
+      if (currentStep < steps.length - 1) {
+        setCurrentStep(currentStep + 1)
       } else {
-        onComplete(formData);
+        onComplete(formData)
       }
     }
-  };
+  }
 
   const handleBack = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep(currentStep - 1)
     }
-  };
+  }
 
   const handleReset = () => {
     Alert.alert(
-      'Reset Form',
-      'Are you sure you want to reset the entire form?',
+      t('alerts.resetFormTitle'),
+      t('alerts.resetEntireFormConfirm'),
       [
-        { text: 'Cancel', onPress: () => {} },
+        { text: t('common.cancel'), onPress: () => {} },
         {
-          text: 'Reset',
+          text: t('app.reset'),
           onPress: () => {
-            dispatch({ type: 'RESET' });
-            setErrors({});
-            setCurrentStep(0);
-            saveDraft(getInitialFormState());
+            dispatch({ type: 'RESET' })
+            setErrors({})
+            setCurrentStep(0)
+            saveDraft(getInitialFormState())
           },
         },
-      ]
-    );
-  };
+      ],
+    )
+  }
 
   const renderStep = () => {
     switch (currentStep) {
       case 0: // Complainant Details
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Complainant Details</Text>
+            <Text style={styles.stepTitle}>
+              {t('sections.complainantDetails')}
+            </Text>
             <FormInput
-              label="Full Name *"
+              label={t('fields.fullNameRequired')}
               value={formData.fullName}
               onChangeText={(text) => handleFieldChange('fullName', text)}
-              placeholder="Enter full name"
+              placeholder={t('placeholders.enterFullName')}
               error={errors.fullName}
             />
             <DropdownPicker
-              label="Gender"
+              label={t('fields.gender')}
               value={formData.gender}
               onValueChange={(value) => handleFieldChange('gender', value)}
-              items={GENDER_OPTIONS}
+              items={genderOptions}
             />
             <FormInput
-              label="Age"
+              label={t('fields.age')}
               value={formData.age}
               onChangeText={(text) => handleFieldChange('age', text)}
-              placeholder="Enter age"
+              placeholder={t('placeholders.enterAge')}
               keyboardType="number-pad"
             />
             <FormInput
-              label="Address *"
+              label={t('fields.addressRequired')}
               value={formData.address}
               onChangeText={(text) => handleFieldChange('address', text)}
-              placeholder="Enter address"
+              placeholder={t('placeholders.enterAddress')}
               multiline
               error={errors.address}
             />
             <FormInput
-              label="Phone Number *"
+              label={t('fields.phoneRequired')}
               value={formData.phone}
               onChangeText={(text) => handleFieldChange('phone', text)}
-              placeholder="Enter phone number"
+              placeholder={t('placeholders.enterPhone')}
               keyboardType="phone-pad"
               error={errors.phone}
             />
             <FormInput
-              label="Email (optional)"
+              label={t('fields.emailOptional')}
               value={formData.email}
               onChangeText={(text) => handleFieldChange('email', text)}
-              placeholder="Enter email"
+              placeholder={t('placeholders.enterEmail')}
               keyboardType="email-address"
               error={errors.email}
             />
           </View>
-        );
+        )
 
       case 1: // Incident Details
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Incident Details</Text>
+            <Text style={styles.stepTitle}>
+              {t('sections.incidentDetails')}
+            </Text>
             <DateTimePickerField
-              label="Date of Incident *"
+              label={t('fields.dateOfIncidentRequired')}
               value={formData.dateOfIncident}
               onChangeDate={(date) => handleFieldChange('dateOfIncident', date)}
               onChangeTime={() => {}}
@@ -266,7 +276,7 @@ const FormScreen = ({ onComplete }) => {
               error={errors.dateOfIncident}
             />
             <DateTimePickerField
-              label="Time of Incident *"
+              label={t('fields.timeOfIncidentRequired')}
               value={formData.timeOfIncident}
               onChangeDate={() => {}}
               onChangeTime={(time) => handleFieldChange('timeOfIncident', time)}
@@ -274,100 +284,112 @@ const FormScreen = ({ onComplete }) => {
               error={errors.timeOfIncident}
             />
             <FormInput
-              label="Place of Occurrence *"
+              label={t('fields.placeOfOccurrenceRequired')}
               value={formData.placeOfOccurrence}
-              onChangeText={(text) => handleFieldChange('placeOfOccurrence', text)}
-              placeholder="Enter place of occurrence"
+              onChangeText={(text) =>
+                handleFieldChange('placeOfOccurrence', text)
+              }
+              placeholder={t('placeholders.location')}
               error={errors.placeOfOccurrence}
             />
             <FormInput
-              label="Police Station *"
+              label={t('fields.policeStationRequired')}
               value={formData.policeStation}
               onChangeText={(text) => handleFieldChange('policeStation', text)}
-              placeholder="Enter police station name"
+              placeholder={t('placeholders.stationName')}
               error={errors.policeStation}
             />
             <FormInput
-              label="District/City *"
+              label={t('fields.districtCityRequired')}
               value={formData.districtCity}
               onChangeText={(text) => handleFieldChange('districtCity', text)}
-              placeholder="Enter district or city"
+              placeholder={t('placeholders.enterDistrictCity')}
               error={errors.districtCity}
             />
           </View>
-        );
+        )
 
       case 2: // Complaint Information
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Complaint Information</Text>
+            <Text style={styles.stepTitle}>
+              {t('sections.complaintInformation')}
+            </Text>
             <DropdownPicker
-              label="Type of Offence"
+              label={t('fields.typeOfOffence')}
               value={formData.offenceType}
               onValueChange={(value) => handleFieldChange('offenceType', value)}
-              items={OFFENCE_TYPES}
+              items={offenceOptions}
             />
             <FormInput
-              label="Detailed Description *"
+              label={t('fields.detailedDescriptionRequired')}
               value={formData.description}
               onChangeText={(text) => handleFieldChange('description', text)}
-              placeholder="Describe the incident in detail (minimum 20 characters)"
+              placeholder={t('placeholders.describeIncidentMin')}
               multiline
               error={errors.description}
             />
           </View>
-        );
+        )
 
       case 3: // Accused Details
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Accused Details (Optional)</Text>
-            <Text style={styles.sectionNote}>
-              Leave blank if accused details are unknown
+            <Text style={styles.stepTitle}>
+              {t('sections.accusedDetailsOptional')}
             </Text>
+            <Text style={styles.sectionNote}>{t('sections.leaveUnknown')}</Text>
             <FormInput
-              label="Name"
+              label={t('common.name')}
               value={formData.accusedName}
               onChangeText={(text) => handleFieldChange('accusedName', text)}
-              placeholder="Enter accused name"
+              placeholder={t('placeholders.accusedName')}
             />
             <FormInput
-              label="Address"
+              label={t('common.address')}
               value={formData.accusedAddress}
               onChangeText={(text) => handleFieldChange('accusedAddress', text)}
-              placeholder="Enter accused address"
+              placeholder={t('placeholders.accusedAddress')}
               multiline
             />
             <FormInput
-              label="Description"
+              label={t('common.description')}
               value={formData.accusedDescription}
-              onChangeText={(text) => handleFieldChange('accusedDescription', text)}
-              placeholder="Describe physical appearance or other details"
+              onChangeText={(text) =>
+                handleFieldChange('accusedDescription', text)
+              }
+              placeholder={t('placeholders.accusedDetails')}
               multiline
             />
           </View>
-        );
+        )
 
       case 4: // Witnesses
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Witness Details (Optional)</Text>
+            <Text style={styles.stepTitle}>
+              {t('sections.witnessDetailsOptional')}
+            </Text>
             {formData.witnesses.length > 0 && (
               <View>
                 {formData.witnesses.map((witness, index) => (
                   <View key={index} style={styles.itemCard}>
                     <View style={styles.itemHeader}>
-                      <Text style={styles.itemTitle}>Witness {index + 1}</Text>
+                      <Text style={styles.itemTitle}>
+                        {t('fields.witness')} {index + 1}
+                      </Text>
                       <TouchableOpacity
                         onPress={() =>
                           dispatch({ type: 'REMOVE_WITNESS', payload: index })
                         }
                       >
-                        <Text style={styles.removeButton}>Remove</Text>
+                        <Text style={styles.removeButton}>
+                          {t('common.remove')}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                     <FormInput
-                      label="Name"
+                      label={t('common.name')}
                       value={witness.name}
                       onChangeText={(text) =>
                         dispatch({
@@ -375,10 +397,10 @@ const FormScreen = ({ onComplete }) => {
                           payload: { index, field: 'name', value: text },
                         })
                       }
-                      placeholder="Enter witness name"
+                      placeholder={t('placeholders.witnessName')}
                     />
                     <FormInput
-                      label="Contact Information"
+                      label={t('fields.contactInformation')}
                       value={witness.contact}
                       onChangeText={(text) =>
                         dispatch({
@@ -386,7 +408,7 @@ const FormScreen = ({ onComplete }) => {
                           payload: { index, field: 'contact', value: text },
                         })
                       }
-                      placeholder="Enter phone or address"
+                      placeholder={t('placeholders.witnessContactExtended')}
                     />
                   </View>
                 ))}
@@ -396,31 +418,39 @@ const FormScreen = ({ onComplete }) => {
               style={styles.addButton}
               onPress={() => dispatch({ type: 'ADD_WITNESS' })}
             >
-              <Text style={styles.addButtonText}>+ Add Witness</Text>
+              <Text style={styles.addButtonText}>
+                {t('actions.addWitness')}
+              </Text>
             </TouchableOpacity>
           </View>
-        );
+        )
 
       case 5: // Evidence
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Evidence Details (Optional)</Text>
+            <Text style={styles.stepTitle}>
+              {t('sections.evidenceDetailsOptional')}
+            </Text>
             {formData.evidence.length > 0 && (
               <View>
                 {formData.evidence.map((evidence, index) => (
                   <View key={index} style={styles.itemCard}>
                     <View style={styles.itemHeader}>
-                      <Text style={styles.itemTitle}>Evidence {index + 1}</Text>
+                      <Text style={styles.itemTitle}>
+                        {t('fields.evidence')} {index + 1}
+                      </Text>
                       <TouchableOpacity
                         onPress={() =>
                           dispatch({ type: 'REMOVE_EVIDENCE', payload: index })
                         }
                       >
-                        <Text style={styles.removeButton}>Remove</Text>
+                        <Text style={styles.removeButton}>
+                          {t('common.remove')}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                     <FormInput
-                      label="Description"
+                      label={t('common.description')}
                       value={evidence.description}
                       onChangeText={(text) =>
                         dispatch({
@@ -428,7 +458,7 @@ const FormScreen = ({ onComplete }) => {
                           payload: { index, value: text },
                         })
                       }
-                      placeholder="Describe the evidence"
+                      placeholder={t('placeholders.evidenceShort')}
                       multiline
                     />
                   </View>
@@ -439,21 +469,20 @@ const FormScreen = ({ onComplete }) => {
               style={styles.addButton}
               onPress={() => dispatch({ type: 'ADD_EVIDENCE' })}
             >
-              <Text style={styles.addButtonText}>+ Add Evidence</Text>
+              <Text style={styles.addButtonText}>
+                {t('actions.addEvidence')}
+              </Text>
             </TouchableOpacity>
           </View>
-        );
+        )
 
       case 6: // Declaration
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Declaration</Text>
+            <Text style={styles.stepTitle}>{t('sections.declaration')}</Text>
             <View style={styles.declarationBox}>
               <Text style={styles.declarationText}>
-                I hereby declare that the information provided in this First
-                Information Report (FIR) is true to the best of my knowledge and
-                belief. I understand that providing false information is an
-                offense under the law.
+                {t('app.declarationText')}
               </Text>
             </View>
             <TouchableOpacity
@@ -476,26 +505,26 @@ const FormScreen = ({ onComplete }) => {
                 )}
               </View>
               <Text style={styles.checkboxLabel}>
-                I accept the declaration
+                {t('fields.declarationAccept')}
               </Text>
             </TouchableOpacity>
             {errors.declaration && (
               <Text style={styles.errorText}>{errors.declaration}</Text>
             )}
           </View>
-        );
+        )
 
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
       <StepIndicator
         currentStep={currentStep}
-        totalSteps={STEPS.length}
-        stepLabels={STEPS}
+        totalSteps={steps.length}
+        stepLabels={steps}
       />
       <KeyboardAwareScrollView
         style={styles.formContent}
@@ -516,24 +545,23 @@ const FormScreen = ({ onComplete }) => {
               currentStep === 0 && styles.buttonTextDisabled,
             ]}
           >
-            Back
+            {t('app.back')}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.resetButton}
-          onPress={handleReset}
-        >
-          <Text style={styles.resetButtonText}>Reset</Text>
+        <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+          <Text style={styles.resetButtonText}>{t('app.reset')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleNext}>
           <Text style={styles.buttonText}>
-            {currentStep === STEPS.length - 1 ? 'Review' : 'Next'}
+            {currentStep === steps.length - 1
+              ? t('actions.review')
+              : t('app.next')}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -687,6 +715,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-});
+})
 
-export default FormScreen;
+export default FormScreen
