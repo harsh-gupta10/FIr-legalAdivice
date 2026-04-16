@@ -7,6 +7,7 @@ A mobile-first React Native app built with Expo to fill out, preview, and genera
 - **Multi-step Form Wizard** — 7 structured steps covering all FIR details
 - **Client-Side Validation** — Required fields, format checks, real-time error messages
 - **Draft Persistence** — Auto-save form progress locally using AsyncStorage
+- **Track FIR** — View previously registered FIRs and manually update case status
 - **Form Preview** — Review all details before generating PDF
 - **PDF Generation & Sharing** — Generate well-formatted PDF and share via native intent
 - **Add Multiple Items** — Support for multiple witnesses and evidence entries
@@ -108,8 +109,10 @@ A mobile-first React Native app built with Expo to fill out, preview, and genera
 2. **Review** — Click "Review" to see all entered data
 3. **Generate PDF** — Click "Share PDF" to generate a formatted FIR document
 4. **Share** — Choose to share via email, WhatsApp, Google Drive, etc.
-5. **Edit** — Click "Edit" to go back and modify any field
-6. **Reset** — Clear all data and start fresh (confirmation required)
+5. **Submit FIR** — Register the FIR and generate a local FIR number for tracking
+6. **Track FIR** — Open "Track FIR", search entries, and manually update status
+7. **Edit** — Click "Edit" to go back and modify any field
+8. **Reset** — Clear all data and start fresh (confirmation required)
 
 ## PDF Output
 

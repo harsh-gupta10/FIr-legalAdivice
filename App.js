@@ -26,16 +26,28 @@ import {
 
 const FORM_STORAGE_KEY = 'firFormData'
 const LANGUAGE_STORAGE_KEY = 'firLanguage'
+const FIR_RECORDS_STORAGE_KEY = 'firRecords'
 
 const OFFENCE_TYPES = ['Theft', 'Assault', 'Fraud', 'Harassment', 'Other']
+const FIR_STATUS_OPTIONS = [
+  'Submitted',
+  'Under Review',
+  'Investigation Started',
+  'Charge Sheet Filed',
+  'Closed',
+]
 
 export default function App() {
-  const [screen, setScreen] = useState('form')
+  const [screen, setScreen] = useState('home')
   const [step, setStep] = useState(1)
   const [language, setLanguage] = useState('en')
   const [selectedLanguage, setSelectedLanguage] = useState('en')
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [isLanguageOnboarding, setIsLanguageOnboarding] = useState(false)
+  const [firRecords, setFirRecords] = useState([])
+  const [trackSearch, setTrackSearch] = useState('')
+  const [selectedFIRId, setSelectedFIRId] = useState(null)
+  const [statusUpdate, setStatusUpdate] = useState({ status: '', note: '' })
 
   const [formData, setFormData] = useState({
     name: '',
@@ -74,6 +86,31 @@ export default function App() {
     }
   }
 
+  const loadFirRecords = async () => {
+    try {
+      const storedRecords = await AsyncStorage.getItem(FIR_RECORDS_STORAGE_KEY)
+      if (!storedRecords) {
+        setFirRecords([])
+        return
+      }
+      setFirRecords(JSON.parse(storedRecords))
+    } catch (error) {
+      console.error('Error loading FIR records:', error)
+    }
+  }
+
+  const persistFirRecords = async (records) => {
+    try {
+      await AsyncStorage.setItem(
+        FIR_RECORDS_STORAGE_KEY,
+        JSON.stringify(records),
+      )
+      setFirRecords(records)
+    } catch (error) {
+      Alert.alert(t('alerts.error'), t('alerts.failedSave'))
+    }
+  }
+
   const initializeApp = async () => {
     try {
       const savedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY)
@@ -89,6 +126,9 @@ export default function App() {
         setIsLanguageOnboarding(true)
         setShowLanguageModal(true)
       }
+
+      await loadFirRecords()
+      setScreen('home')
     } catch (error) {
       console.error('Error loading app data:', error)
     }
@@ -281,6 +321,109 @@ export default function App() {
     }
   }
 
+  const createFIRNumber = () => {
+    const year = new Date().getFullYear()
+    const suffix = String(Date.now()).slice(-6)
+    return `FIR-${year}-${suffix}`
+  }
+
+  const submitFIR = () => {
+    Alert.alert(t('alerts.confirm'), t('alerts.submitFirConfirm'), [
+      { text: t('common.cancel') },
+      {
+        text: t('actions.submitFir'),
+        onPress: async () => {
+          const nowIso = new Date().toISOString()
+          const newRecord = {
+            id: nowIso,
+            firNumber: createFIRNumber(),
+            submittedAt: nowIso,
+            status: FIR_STATUS_OPTIONS[0],
+            statusHistory: [
+              {
+                status: FIR_STATUS_OPTIONS[0],
+                note: 'Initial submission',
+                updatedAt: nowIso,
+              },
+            ],
+            formDataSnapshot: { ...formData },
+          }
+
+          const updatedRecords = [newRecord, ...firRecords]
+          await persistFirRecords(updatedRecords)
+          await AsyncStorage.removeItem(FORM_STORAGE_KEY)
+          setFormData(resetFormData)
+          setStep(1)
+          setSelectedFIRId(newRecord.id)
+          setStatusUpdate({ status: newRecord.status, note: '' })
+          setScreen('track')
+          Alert.alert(
+            t('alerts.success'),
+            t('alerts.firRegistered', { firNumber: newRecord.firNumber }),
+          )
+        },
+      },
+    ])
+  }
+
+  const filteredRecords = useMemo(() => {
+    const query = trackSearch.trim().toLowerCase()
+    if (!query) return firRecords
+
+    return firRecords.filter((record) => {
+      const name = record.formDataSnapshot?.name || ''
+      const phone = record.formDataSnapshot?.phone || ''
+      return (
+        record.firNumber.toLowerCase().includes(query) ||
+        name.toLowerCase().includes(query) ||
+        phone.toLowerCase().includes(query)
+      )
+    })
+  }, [trackSearch, firRecords])
+
+  const selectedRecord = useMemo(() => {
+    return firRecords.find((record) => record.id === selectedFIRId) || null
+  }, [firRecords, selectedFIRId])
+
+  const selectFIRRecord = (record) => {
+    setSelectedFIRId(record.id)
+    setStatusUpdate({ status: record.status, note: '' })
+  }
+
+  const updateSelectedFIRStatus = async () => {
+    if (!selectedFIRId || !statusUpdate.status) {
+      Alert.alert(t('alerts.error'), t('alerts.selectFirAndStatus'))
+      return
+    }
+
+    const nowIso = new Date().toISOString()
+    const nextRecords = firRecords.map((record) => {
+      if (record.id !== selectedFIRId) return record
+
+      const shouldAddHistory =
+        record.status !== statusUpdate.status || statusUpdate.note.trim().length
+
+      return {
+        ...record,
+        status: statusUpdate.status,
+        statusHistory: shouldAddHistory
+          ? [
+              {
+                status: statusUpdate.status,
+                note: statusUpdate.note.trim(),
+                updatedAt: nowIso,
+              },
+              ...record.statusHistory,
+            ]
+          : record.statusHistory,
+      }
+    })
+
+    await persistFirRecords(nextRecords)
+    setStatusUpdate((prev) => ({ ...prev, note: '' }))
+    Alert.alert(t('alerts.success'), t('alerts.firStatusUpdated'))
+  }
+
   const generatePDF = async () => {
     try {
       Alert.alert(t('alerts.success'), t('alerts.pdfSaved'))
@@ -317,6 +460,19 @@ export default function App() {
   const currentLanguageLabel =
     LANGUAGE_OPTIONS.find((item) => item.code === getCurrentLanguage())
       ?.label || 'English'
+
+  const openNewFir = () => {
+    setStep(1)
+    setScreen('form')
+  }
+
+  const openTrackFirs = () => {
+    setScreen('track')
+  }
+
+  const goHome = () => {
+    setScreen('home')
+  }
 
   return (
     <>
@@ -372,18 +528,213 @@ export default function App() {
         </View>
       </Modal>
 
-      {screen === 'preview' ? (
+      {screen === 'home' ? (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.homeContent}
+        >
+          <View style={styles.homeHero}>
+            <Text style={styles.homeEyebrow}>{t('app.homeEyebrow')}</Text>
+            <Text style={styles.homeTitle}>{t('app.homeTitle')}</Text>
+            <Text style={styles.homeSubtitle}>{t('app.homeSubtitle')}</Text>
+          </View>
+
+          <View style={styles.homeCard}>
+            <Text style={styles.homeCardTitle}>{t('app.startNewFir')}</Text>
+            <Text style={styles.homeCardText}>
+              {t('app.startNewFirDescription')}
+            </Text>
+            <TouchableOpacity
+              style={styles.homePrimaryButton}
+              onPress={openNewFir}
+            >
+              <Text style={styles.homePrimaryButtonText}>
+                {t('actions.fileNewFir')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.homeCardSecondary}>
+            <Text style={styles.homeCardTitle}>{t('app.trackFir')}</Text>
+            <Text style={styles.homeCardText}>
+              {t('app.trackFirDescription')}
+            </Text>
+            <TouchableOpacity
+              style={styles.homeSecondaryButton}
+              onPress={openTrackFirs}
+            >
+              <Text style={styles.homeSecondaryButtonText}>
+                {t('actions.openTrackFir')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.homeLanguageChip}
+            onPress={() => setShowLanguageModal(true)}
+          >
+            <Text style={styles.languageButtonText}>
+              {t('app.language')}: {currentLanguageLabel}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      ) : screen === 'track' ? (
+        <ScrollView style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>{t('app.trackFir')}</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerButton} onPress={goHome}>
+                <Text style={styles.headerButtonText}>{t('app.home')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.languageButton}
+                onPress={() => setShowLanguageModal(true)}
+              >
+                <Text style={styles.languageButtonText}>
+                  {t('app.language')}: {currentLanguageLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.button} onPress={openNewFir}>
+              <Text style={styles.buttonText}>{t('app.editForm')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>{t('app.searchFir')}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={t('app.searchFirPlaceholder')}
+            value={trackSearch}
+            onChangeText={setTrackSearch}
+          />
+
+          <View style={styles.previewSection}>
+            <Text style={styles.sectionTitle}>{t('sections.trackFir')}</Text>
+            {filteredRecords.length === 0 ? (
+              <Text style={styles.previewText}>{t('app.noFirFound')}</Text>
+            ) : (
+              filteredRecords.map((record) => (
+                <TouchableOpacity
+                  key={record.id}
+                  style={[
+                    styles.trackCard,
+                    selectedFIRId === record.id && styles.trackCardSelected,
+                  ]}
+                  onPress={() => selectFIRRecord(record)}
+                >
+                  <Text style={styles.trackCardTitle}>{record.firNumber}</Text>
+                  <Text style={styles.previewText}>
+                    {t('common.name')}: {record.formDataSnapshot?.name}
+                  </Text>
+                  <Text style={styles.previewText}>
+                    {t('common.phone')}: {record.formDataSnapshot?.phone}
+                  </Text>
+                  <Text style={styles.previewText}>
+                    {t('common.status')}: {record.status}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+
+          {selectedRecord ? (
+            <View style={styles.previewSection}>
+              <Text style={styles.sectionTitle}>
+                {t('actions.updateStatus')}: {selectedRecord.firNumber}
+              </Text>
+              <Text style={styles.label}>{t('fields.currentStatus')}</Text>
+              <Text style={styles.previewText}>{selectedRecord.status}</Text>
+
+              <Text style={styles.label}>{t('fields.statusUpdateLabel')}</Text>
+              <View style={styles.dropdownContainer}>
+                {FIR_STATUS_OPTIONS.map((statusOption) => (
+                  <TouchableOpacity
+                    key={statusOption}
+                    style={[
+                      styles.dropdownItem,
+                      statusUpdate.status === statusOption &&
+                        styles.dropdownItemSelected,
+                    ]}
+                    onPress={() =>
+                      setStatusUpdate((prev) => ({
+                        ...prev,
+                        status: statusOption,
+                      }))
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownText,
+                        statusUpdate.status === statusOption &&
+                          styles.dropdownTextSelected,
+                      ]}
+                    >
+                      {statusOption}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>{t('fields.statusUpdateNote')}</Text>
+              <TextInput
+                style={[styles.input, { height: 100 }]}
+                placeholder={t('placeholders.statusUpdateNote')}
+                value={statusUpdate.note}
+                onChangeText={(note) =>
+                  setStatusUpdate((prev) => ({ ...prev, note }))
+                }
+                multiline
+              />
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#27ae60' }]}
+                onPress={updateSelectedFIRStatus}
+              >
+                <Text style={styles.buttonText}>
+                  {t('actions.updateStatus')}
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={[styles.sectionTitle, { marginTop: 18 }]}>
+                {t('sections.statusHistory')}
+              </Text>
+              {selectedRecord.statusHistory.map((item, idx) => (
+                <View key={`${item.updatedAt}-${idx}`} style={styles.listItem}>
+                  <Text style={styles.listText}>
+                    {item.status} - {new Date(item.updatedAt).toLocaleString()}
+                    {item.note ? `\n${item.note}` : ''}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.previewSection}>
+              <Text style={styles.previewText}>
+                {t('app.selectFirToUpdate')}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      ) : screen === 'preview' ? (
         <ScrollView style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('app.preview')}</Text>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => setShowLanguageModal(true)}
-            >
-              <Text style={styles.languageButtonText}>
-                {t('app.language')}: {currentLanguageLabel}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerButton} onPress={goHome}>
+                <Text style={styles.headerButtonText}>{t('app.home')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.languageButton}
+                onPress={() => setShowLanguageModal(true)}
+              >
+                <Text style={styles.languageButtonText}>
+                  {t('app.language')}: {currentLanguageLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.buttonContainer}>
@@ -404,6 +755,18 @@ export default function App() {
               onPress={sharePDF}
             >
               <Text style={styles.buttonText}>{t('app.share')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: '#8e44ad' }]}
+              onPress={submitFIR}
+            >
+              <Text style={styles.buttonText}>{t('actions.submitFir')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: '#34495e' }]}
+              onPress={openTrackFirs}
+            >
+              <Text style={styles.buttonText}>{t('actions.openTrackFir')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -509,14 +872,19 @@ export default function App() {
             <Text style={styles.title}>
               {t('app.stepTitle', { step, total: 7 })}
             </Text>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => setShowLanguageModal(true)}
-            >
-              <Text style={styles.languageButtonText}>
-                {t('app.language')}: {currentLanguageLabel}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerButton} onPress={goHome}>
+                <Text style={styles.headerButtonText}>{t('app.home')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.languageButton}
+                onPress={() => setShowLanguageModal(true)}
+              >
+                <Text style={styles.languageButtonText}>
+                  {t('app.language')}: {currentLanguageLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {step === 1 && (
@@ -873,13 +1241,128 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5', padding: 15 },
+  homeContent: {
+    paddingBottom: 28,
+  },
+  homeHero: {
+    backgroundColor: '#1f4f79',
+    borderRadius: 18,
+    padding: 22,
+    marginBottom: 18,
+  },
+  homeEyebrow: {
+    color: '#d7ebff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  homeTitle: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: '800',
+    lineHeight: 36,
+  },
+  homeSubtitle: {
+    color: '#e4f1fb',
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 10,
+  },
+  homeCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#d8e4ef',
+  },
+  homeCardSecondary: {
+    backgroundColor: '#f8fbff',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#c8d8e6',
+  },
+  homeCardTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#17324a',
+    marginBottom: 6,
+  },
+  homeCardText: {
+    fontSize: 14,
+    color: '#506579',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  homePrimaryButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  homePrimaryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  homeSecondaryButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2d6ea8',
+  },
+  homeSecondaryButtonText: {
+    color: '#1f4f79',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  homeLanguageChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eef5fb',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#c5d8ea',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
   header: {
     marginBottom: 20,
     paddingVertical: 10,
     borderBottomWidth: 2,
     borderBottomColor: '#3498db',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   title: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50' },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    flex: 1,
+  },
+  headerButton: {
+    backgroundColor: '#edf4fb',
+    borderWidth: 1,
+    borderColor: '#c4d8ea',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  headerButtonText: {
+    color: '#1f4f79',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -969,6 +1452,24 @@ const styles = StyleSheet.create({
     borderLeftColor: '#3498db',
   },
   previewText: { fontSize: 13, color: '#2c3e50', marginBottom: 5 },
+  trackCard: {
+    borderWidth: 1,
+    borderColor: '#d7e3ef',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+  },
+  trackCardSelected: {
+    borderColor: '#3498db',
+    backgroundColor: '#eef7ff',
+  },
+  trackCardTitle: {
+    color: '#1f4f79',
+    fontWeight: '700',
+    fontSize: 14,
+    marginBottom: 6,
+  },
   languageButton: {
     marginTop: 10,
     alignSelf: 'flex-start',

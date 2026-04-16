@@ -11,8 +11,23 @@ const translations = {
   en: {
     app: {
       title: 'FIR Form',
+      home: 'Home',
+      homeEyebrow: 'Citizen FIR Portal',
+      homeTitle: 'Welcome to the FIR assistant',
+      homeSubtitle:
+        'File a new FIR or review and manually update the status of submitted FIRs.',
+      startNewFir: 'File a New FIR',
+      startNewFirDescription:
+        'Start the step-by-step FIR form with all the fields you already use today.',
+      trackFirDescription:
+        'View every submitted FIR in one place and update its current status manually.',
       stepTitle: 'FIR Form - Step {{step}}/{{total}}',
       preview: 'FIR Preview',
+      trackFir: 'Track FIR',
+      searchFir: 'Search FIR',
+      searchFirPlaceholder: 'Search by FIR number, name, or phone',
+      noFirFound: 'No registered FIR found',
+      selectFirToUpdate: 'Select an FIR to manually update status',
       language: 'Language',
       chooseLanguage: 'Choose your language',
       selectLanguageHint: 'Please select your preferred language to continue.',
@@ -45,6 +60,7 @@ const translations = {
       phone: 'Phone',
       email: 'Email',
       contact: 'Contact',
+      status: 'Status',
       remove: 'Remove',
       edit: 'Edit',
       optional: 'Optional',
@@ -76,6 +92,9 @@ const translations = {
       submitFirConfirm:
         'Are you sure you want to submit this FIR? This will clear the saved draft.',
       firSubmitted: 'FIR submitted successfully! Draft cleared.',
+      firRegistered: 'FIR registered successfully. FIR Number: {{firNumber}}',
+      selectFirAndStatus: 'Select an FIR and status before updating',
+      firStatusUpdated: 'FIR status updated successfully',
     },
     sections: {
       complainantDetails: 'Complainant Details',
@@ -88,6 +107,8 @@ const translations = {
       evidenceDetails: 'Evidence Details',
       evidenceDetailsOptional: 'Evidence Details (Optional)',
       declaration: 'Declaration',
+      trackFir: 'Registered FIRs',
+      statusHistory: 'Status History',
       witnessesCount: 'Witnesses ({{count}})',
       evidenceCount: 'Evidence ({{count}})',
       leaveUnknown: 'Leave blank if accused details are unknown',
@@ -129,6 +150,9 @@ const translations = {
       datePlaceholder: 'Date: _______________',
       officialRecord: 'Official Record of Complaint',
       generatedOn: 'Generated on',
+      currentStatus: 'Current Status',
+      statusUpdateLabel: 'Select New Status',
+      statusUpdateNote: 'Update Note (optional)',
     },
     placeholders: {
       enterName: 'Enter name',
@@ -158,16 +182,21 @@ const translations = {
       witnessContactExtended: 'Enter phone or address',
       evidenceInput: 'Describe the evidence or enter link to proof (optional)',
       evidenceShort: 'Describe the evidence',
+      statusUpdateNote: 'Add update details (for example: documents verified)',
       selectDate: 'Select Date',
       selectTime: 'Select Time',
       selectOption: 'Select an option',
     },
     actions: {
+      fileNewFir: 'File New FIR',
       addWitness: '+ Add Witness',
       addEvidence: '+ Add Evidence',
       review: 'Review',
       reviewFir: 'Review FIR',
       sharePdf: 'Share PDF',
+      submitFir: 'Submit FIR',
+      openTrackFir: 'Open Track FIR',
+      updateStatus: 'Update Status',
       selectHowToShare: 'Please select how to share it.',
     },
     validation: {
@@ -215,6 +244,16 @@ const translations = {
   hi: {
     app: {
       title: 'एफआईआर फॉर्म',
+      home: 'होम',
+      homeEyebrow: 'नागरिक एफआईआर पोर्टल',
+      homeTitle: 'एफआईआर सहायक में आपका स्वागत है',
+      homeSubtitle:
+        'नई एफआईआर दर्ज करें या जमा की गई एफआईआर की स्थिति देखें और मैन्युअल रूप से अपडेट करें।',
+      startNewFir: 'नई एफआईआर दर्ज करें',
+      startNewFirDescription:
+        'आज उपयोग में आने वाले सभी फ़ील्ड के साथ चरण-दर-चरण एफआईआर फॉर्म शुरू करें।',
+      trackFirDescription:
+        'सभी जमा की गई एफआईआर एक जगह देखें और उनकी वर्तमान स्थिति मैन्युअल रूप से अपडेट करें।',
       stepTitle: 'एफआईआर फॉर्म - चरण {{step}}/{{total}}',
       preview: 'एफआईआर पूर्वावलोकन',
       language: 'भाषा',
@@ -366,6 +405,7 @@ const translations = {
       selectOption: 'एक विकल्प चुनें',
     },
     actions: {
+      fileNewFir: 'नई एफआईआर दर्ज करें',
       addWitness: '+ गवाह जोड़ें',
       addEvidence: '+ साक्ष्य जोड़ें',
       review: 'समीक्षा',
